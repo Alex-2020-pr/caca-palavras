@@ -278,6 +278,129 @@
       .words-box { max-width: 500px; margin: 0 auto; }
     }
 
+
+    @media (max-width: 900px) {
+      .app {
+        padding: 12px;
+      }
+
+      .header {
+        margin-bottom: 12px;
+      }
+
+      .header h1 {
+        font-size: 26px;
+      }
+
+      .subtitle {
+        font-size: 14px;
+      }
+
+      .grid-layout {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .card {
+        padding: 14px;
+        border-radius: 12px;
+      }
+
+      .inline {
+        grid-template-columns: 1fr;
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .actions button {
+        width: 100%;
+        min-height: 46px;
+      }
+
+      .puzzle-sheet {
+        padding: 4px;
+      }
+
+      .puzzle-title {
+        font-size: 22px;
+      }
+
+      .puzzle-instructions {
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      .puzzle-area {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .word-grid {
+        width: 100%;
+        max-width: 100%;
+        overflow: visible;
+        gap: 1px;
+        padding: 2px;
+        touch-action: none;
+      }
+
+      .cell {
+        width: var(--mobile-cell-size, 28px);
+        height: var(--mobile-cell-size, 28px);
+        min-width: var(--mobile-cell-size, 28px);
+        min-height: var(--mobile-cell-size, 28px);
+        font-size: var(--mobile-font-size, 15px) !important;
+        border-width: 1px;
+      }
+
+      .words-box {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+      }
+
+      .word-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px 14px;
+      }
+
+      .footer-note {
+        font-size: 11px;
+        line-height: 1.5;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .app {
+        padding: 8px;
+      }
+
+      .card {
+        padding: 10px;
+      }
+
+      .actions {
+        grid-template-columns: 1fr;
+      }
+
+      .puzzle-title {
+        font-size: 20px;
+      }
+
+      .word-list {
+        grid-template-columns: 1fr 1fr;
+        font-size: 13px;
+      }
+
+      .words-box h3 {
+        font-size: 16px;
+      }
+    }
+
     @media print {
       body {
         background: #fff;
@@ -838,6 +961,7 @@
 
       document.addEventListener("touchmove", event => {
         if (!isSelecting || !event.touches.length) return;
+        event.preventDefault();
 
         const touch = event.touches[0];
         const target = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -850,6 +974,13 @@
         }
       }, { passive: false });
     }
+
+
+    let resizeTimer;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(updateResponsiveGrid, 120);
+    });
 
     document.addEventListener("mouseup", () => {
       if (!isSelecting) return;
@@ -864,6 +995,37 @@
       finishSelection();
       selectionStart = null;
     });
+
+
+    function updateResponsiveGrid() {
+      if (!lastPuzzle) return;
+
+      const size = lastPuzzle.grid.length;
+      const container = els.wordGrid.parentElement;
+      const availableWidth = Math.max(260, container.clientWidth - 8);
+
+      let cellSize = Math.floor((availableWidth - (size - 1)) / size);
+      cellSize = Math.max(18, Math.min(34, cellSize));
+
+      let fontSize = Math.floor(cellSize * 0.55);
+      fontSize = Math.max(10, Math.min(Number(els.fontSize.value), fontSize));
+
+      els.wordGrid.style.setProperty("--mobile-cell-size", `${cellSize}px`);
+      els.wordGrid.style.setProperty("--mobile-font-size", `${fontSize}px`);
+      els.wordGrid.style.gridTemplateColumns = `repeat(${size}, ${cellSize}px)`;
+
+      document.querySelectorAll(".cell").forEach(cell => {
+        if (window.innerWidth <= 900) {
+          cell.style.width = `${cellSize}px`;
+          cell.style.height = `${cellSize}px`;
+          cell.style.fontSize = `${fontSize}px`;
+        } else {
+          cell.style.width = "34px";
+          cell.style.height = "34px";
+          cell.style.fontSize = `${els.fontSize.value}px`;
+        }
+      });
+    }
 
     function renderPuzzle(puzzle) {
       lastPuzzle = puzzle;
@@ -915,6 +1077,7 @@
       });
 
       attachGridInteraction();
+      requestAnimationFrame(updateResponsiveGrid);
 
       if (puzzle.failed.length) {
         showStatus(
